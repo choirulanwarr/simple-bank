@@ -104,6 +104,10 @@ func (r *CustomerRepo) DeleteCustomer(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (r *CustomerRepo) VerifyPassword(ctx context.Context, hashedPassword, plainPassword string) error {
+	return password.VerifyPassword(hashedPassword, plainPassword)
+}
+
 type UpdateCustomerParams struct {
 	ID       int64
 	Name     string

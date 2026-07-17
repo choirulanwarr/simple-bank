@@ -1,0 +1,84 @@
+package repository
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+
+	"github.com/choirulanwar/simple-bank/db/sqlc"
+	"github.com/choirulanwar/simple-bank/pkg/password"
+)
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+type CustomerRepo struct {
+	store sqlc.Querier
+}
+
+func NewCustomerRepo(store sqlc.Querier) *CustomerRepo {
+	return &CustomerRepo{store: store}
+}
+
+type CreateCustomerParams struct {
+	Name     string
+	Email    string
+	Password string
+}
+
+func (r *CustomerRepo) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (sqlc.Customer, error) {
+	// Validate email format
+	if !emailRegex.MatchString(arg.Email) {
+		return sqlc.Customer{}, fmt.Errorf("invalid email format")
+	}
+
+	// Check if email already exists
+	existing, err := r.store.GetCustomerByEmail(ctx, arg.Email)
+	if err == nil && existing.ID > 0 {
+		return sqlc.Customer{}, fmt.Errorf("email already registered: %s", arg.Email)
+	}
+
+	// Hash password
+	hashedPassword, err := password.HashPassword(arg.Password)
+	if err != nil {
+		return sqlc.Customer{}, fmt.Errorf("hash password: %w", err)
+	}
+
+	// Create customer
+	customer, err := r.store.CreateCustomer(ctx, sqlc.CreateCustomerParams{
+		Name:         arg.Name,
+		Email:        arg.Email,
+		PasswordHash: hashedPassword,
+	})
+	if err != nil {
+		return sqlc.Customer{}, fmt.Errorf("create customer: %w", err)
+	}
+
+	return customer, nil
+}
+
+func (r *CustomerRepo) GetCustomer(ctx context.Context, id int64) (sqlc.Customer, error) {
+	customer, err := r.store.GetCustomer(ctx, id)
+	if err != nil {
+		return sqlc.Customer{}, fmt.Errorf("get customer: %w", err)
+	}
+	return customer, nil
+}
+
+func (r *CustomerRepo) GetCustomerByEmail(ctx context.Context, email string) (sqlc.Customer, error) {
+	customer, err := r.store.GetCustomerByEmail(ctx, email)
+	if err != nil {
+		return sqlc.Customer{}, fmt.Errorf("get customer by email: %w", err)
+	}
+	return customer, nil
+}
+
+func (r *CustomerRepo) ListCustomers(ctx context.Context, limit, offset int32) ([]sqlc.Customer, error) {
+	customers, err := r.store.ListCustomers(ctx, sqlc.ListCustomersParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list customers: %w", err)
+	}
+	return customers, nil
+}

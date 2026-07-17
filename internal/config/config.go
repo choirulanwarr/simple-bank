@@ -1,7 +1,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -26,9 +28,15 @@ func Load() (*Config, error) {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
+		// Check if it's a "file not found" error (either viper.ConfigFileNotFoundError or os.PathError)
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, err
+			// Check for os.PathError (when .env file doesn't exist)
+			var pathErr *os.PathError
+			if !errors.As(err, &pathErr) {
+				return nil, err
+			}
 		}
+		// .env file not found is OK, continue with env vars only
 	}
 
 	var cfg Config

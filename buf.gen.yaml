@@ -6,3 +6,9 @@ plugins:
   - remote: buf.build/grpc/go
     out: api/pb
     opt: paths=source_relative
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/choirulanwar/simple-bank/api/pb
+    except:
+      - buf.build/googleapis/googleapis

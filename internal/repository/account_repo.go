@@ -99,6 +99,17 @@ func (r *AccountRepo) ListAccountsByCustomer(ctx context.Context, customerID int
 	return accounts, nil
 }
 
+func (r *AccountRepo) UpdateAccountStatus(ctx context.Context, id int64, status string) (sqlc.Account, error) {
+	account, err := r.store.UpdateAccountStatus(ctx, sqlc.UpdateAccountStatusParams{
+		ID:     id,
+		Status: status,
+	})
+	if err != nil {
+		return sqlc.Account{}, fmt.Errorf("update account status: %w", err)
+	}
+	return account, nil
+}
+
 type DepositParams struct {
 	AccountID   int64
 	Amount      string

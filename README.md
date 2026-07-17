@@ -1,230 +1,279 @@
 # Simple Bank — Backend Banking System
 
-> **Backend perbankan sederhana** dengan Go, gRPC, PostgreSQL, Docker. Mendemonstrasikan implementasi transaksi finansial ACID-compliant, audit trail, dan arsitektur microservice-ready.
+> **Production-ready backend banking system** built with Go, gRPC, PostgreSQL, and Docker. Features ACID-compliant transfers, audit trails, and clean architecture.
+
+[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://golang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://www.postgresql.org/)
+[![gRPC](https://img.shields.io/badge/gRPC-1.65+-4285F4?logo=grpc)](https://grpc.io/)
+[![Docker](https://img.shields.io/badge/Docker-24+-2496ED?logo=docker)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
 
-## ✨ Fitur Utama
+## Features
 
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Customer Management** | CRUD nasabah, validasi email unik, password hashing (bcrypt) |
-| **Account Management** | Multi-rekening per nasabah, auto-generate nomor rekening 16 digit |
-| **Deposit / Withdrawal** | Update saldo atomik, pencatatan transaksi dengan balance_before/after |
-| **Transfer Dana** | ACID transaction, pessimistic locking (`FOR NO KEY UPDATE`), deadlock-safe |
-| **Audit Trail** | Trigger PostgreSQL otomatis (INSERT/UPDATE/DELETE) — immutable |
-| **Authentication** | PASETO/JWT token, gRPC auth interceptor |
+| Feature | Description |
+|---------|-------------|
+| **Customer Management** | Create, read, update, deactivate customers |
+| **Bank Accounts** | Multi-account per customer, auto-generated 16-digit numbers |
+| **Deposits** | Atomic balance updates with transaction logging |
+| **Withdrawals** | Balance validation, atomic updates, transaction records |
+| **Transfers** | **ACID-compliant** inter-account transfers with deadlock prevention |
+| **Audit Trail** | Automatic immutable logging via PostgreSQL triggers |
+| **Authentication** | PASETO/JWT tokens with gRPC interceptors |
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| **Language** | Go 1.22+ |
-| **API** | gRPC + Protocol Buffers (Buf) |
-| **Database** | PostgreSQL 16 (pgx/v5 driver) |
-| **SQL → Go** | SQLC (compile-time type-safe) |
-| **Migrations** | golang-migrate |
-| **Config** | Viper (.env + env vars) |
-| **Testing** | Testify (suite + mock) |
-| **Container** | Docker multi-stage, Docker Compose |
-| **Cache** | Redis 7 (planned) |
+| Language | Go 1.22+ |
+| API | gRPC + Protocol Buffers (Buf) |
+| Database | PostgreSQL 16 (pgx/v5) |
+| Migrations | golang-migrate |
+| SQL → Go | SQLC (compile-time safe) |
+| Config | Viper (.env + env vars) |
+| Auth | PASETO / JWT (golang.org/x/crypto) |
+| Testing | Testify (suite + mock) |
+| Container | Multi-stage Dockerfile |
+| Orchestration | Docker Compose |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### Prasyarat
+### Prerequisites
 
 ```bash
-go version          # Go 1.22+
-docker --version    # Docker 24+
+go version          # 1.22+
+docker --version    # 24+
 docker compose version
 ```
 
-### 1. Clone & Setup
+### 1. Clone & Configure
 
 ```bash
-git clone git@github.com:choirulanwar/simple-bank.git
+git clone git@github.com:choirulanwarr/simple-bank.git
 cd simple-bank/backend
 
 # Copy env template
 cp .env.example .env
-# Edit .env jika perlu (default sudah OK untuk local)
+# Edit .env if needed (defaults work for local Docker)
 ```
 
-### 2. Jalankan Semua Service (1 command)
+### 2. Start Full Stack (Database + Redis + App)
 
 ```bash
-# Start PostgreSQL, Redis, run migrations, start API server
+# One command: starts PostgreSQL, Redis, runs migrations, starts gRPC server
 make dev
+
+# Or step by step:
+docker compose up -d        # Start PostgreSQL + Redis
+make migrate-up             # Run database migrations
+make server                 # Start Go server (port 9090)
 ```
 
-Atau manual via Docker Compose:
+### 3. Verify
 
 ```bash
-docker compose up -d
-# API: localhost:9090 (gRPC)
-# PostgreSQL: localhost:5432
-# Redis: localhost:6379
-```
+# gRPC health check (requires grpcurl)
+grpcurl -plaintext localhost:9090 grpc.health.v1.Health/Check
 
-### 3. Verifikasi
-
-```bash
-# Health check via grpcurl
+# List services
 grpcurl -plaintext localhost:9090 list
-# simplebank.SimpleBank
 ```
 
 ---
 
-## 📁 Struktur Project
+## Project Structure
 
 ```
 backend/
-├── api/pb/                 # Generated gRPC code
-├── cmd/server/main.go      # Entry point
+├── api/pb/                    # Generated gRPC code
+├── cmd/server/main.go         # Entry point
 ├── db/
-│   ├── migrations/         # SQL migrations (up/down)
-│   ├── queries/            # SQLC source queries
-│   └── sqlc/               # Generated Go code
+│   ├── migrations/            # SQL migrations (up/down)
+│   ├── queries/               # SQLC source queries
+│   └── sqlc/                  # Generated Go code
 ├── internal/
-│   ├── config/             # Viper config loader
-│   ├── controller/         # Business logic
-│   ├── middleware/         # gRPC interceptors
-│   ├── model/              # Domain models
-│   └── repository/         # Data access (wraps SQLC)
+│   ├── config/                # Viper config loader
+│   ├── controller/            # Business logic layer
+│   ├── middleware/            # gRPC interceptors (auth, logging, recovery)
+│   ├── model/                 # Domain models & DTOs
+│   ├── repository/            # Data access (wraps SQLC)
+│   └── cache/                 # Redis caching (future)
 ├── pkg/
-│   ├── password/           # bcrypt utilities
-│   └── token/              # PASETO/JWT utilities
-├── proto/simple_bank.proto # gRPC contract
-├── docker-compose.yml      # Full stack (PG + Redis + App + Migrate)
-├── Dockerfile              # Multi-stage production build
-├── Makefile                # Common tasks
-├── sqlc.yaml               # SQLC config
-└── buf.gen.yaml            # Buf config
+│   ├── password/              # Bcrypt utilities
+│   └── token/                 # PASETO/JWT utilities
+├── proto/simple_bank.proto    # gRPC contract
+├── docker-compose.yml         # Full local stack
+├── Dockerfile                 # Multi-stage build
+├── Makefile                   # Common tasks
+├── sqlc.yaml                  # SQLC config
+└── buf.gen.yaml               # Buf config
 ```
 
 ---
 
-## 🔧 Development Commands
+## Key Architecture Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **gRPC over REST** | Strongly-typed contracts, code generation, HTTP/2 performance |
+| **SQLC over ORM** | Compile-time SQL validation, zero reflection, full query control |
+| **PostgreSQL triggers for audit** | Immutable, cannot be bypassed by application bugs |
+| **Pessimistic locking (`FOR NO KEY UPDATE`)** | Prevents lost updates in concurrent transfers |
+| **Consistent lock ordering** | Mathematically prevents deadlocks (always lock lower ID first) |
+| **`decimal.Decimal` for money** | Zero floating-point errors |
+
+---
+
+## Development Commands
 
 ```bash
 # Database
 make postgres          # Start PostgreSQL only
 make redis             # Start Redis only
-make migrate-up        # Run migrations
+make migrate-up        # Apply migrations
 make migrate-down      # Rollback last migration
-make migrate-create    # Create new migration (interactive)
+make migrate-create    # Create new migration (prompts for name)
 
 # Code Generation
-make sqlc              # Generate Go code from SQL
-make proto             # Generate gRPC code from .proto
-make generate          # Both sqlc + proto
+make sqlc              # Generate Go from SQL
+make proto             # Generate gRPC from .proto
 
 # Testing
 make test              # All unit tests with coverage
 make test-integration  # Integration tests (requires Docker)
 
-# Build & Run
-make server            # Run server locally (hot reload via air)
+# Server
+make server            # Run with hot reload (air)
 make build             # Build binary to bin/server
-make docker-build      # Build Docker image
 
 # Docker
-make docker-up         # docker compose up -d
-make docker-down       # docker compose down -v
+make docker-build      # Build image
+make docker-up         # Full stack via compose
+make docker-down       # Stop & remove volumes
 
-# Code Quality
+# Quality
+make fmt               # goimports formatting
 make lint              # golangci-lint
-make fmt               # goimports -w .
 ```
 
 ---
 
-## 🗄 Database Schema (ERD)
+## API Reference (gRPC)
 
+### Services
+
+```protobuf
+service SimpleBank {
+  // Customers
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
+  rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse);
+
+  // Accounts
+  rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse);
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  rpc UpdateAccountStatus(UpdateAccountStatusRequest) returns (UpdateAccountStatusResponse);
+
+  // Transactions
+  rpc Deposit(DepositRequest) returns (DepositResponse);
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse);
+  rpc Transfer(TransferRequest) returns (TransferResponse);
+  rpc GetTransactionHistory(GetTransactionHistoryRequest) returns (GetTransactionHistoryResponse);
+
+  // Audit
+  rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse);
+
+  // Auth
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
 ```
-customers ◄──── accounts ► transactions
-  │              │
-  │              └──── transfers ◄──── accounts
-  │
-  └──── audit_logs (trigger-based, all tables)
-```
 
-**5 Tabel Utama:**
-- `customers` — nasabah (id, name, email, password_hash, is_active)
-- `accounts` — rekening (customer_id, account_number, currency, balance, status)
-- `transactions` — deposit/withdrawal per rekening
-- `transfers` — transfer antar rekening (from_account, to_account, amount, fee, status)
-- `audit_logs` — immutable audit trail (JSONB old/new values)
-
----
-
-## 🔐 Security Highlights
-
-- **Password**: bcrypt cost 12, never logged
-- **Token**: PASETO (preferred) / JWT HS256, 15min access / 24h refresh
-- **Money**: `decimal.Decimal` — zero floating-point errors
-- **SQL Injection**: 100% SQLC parameterized queries
-- **Audit**: Database-level triggers — cannot be bypassed by app code
-
----
-
-## 📡 gRPC API (Protobuf)
-
-Service: `simplebank.SimpleBank`
-
-| RPC | Request | Response |
-|-----|---------|----------|
-| `CreateCustomer` | name, email, password | Customer |
-| `GetCustomer` | id | Customer |
-| `ListCustomers` | limit, offset | Customer[] + pagination |
-| `CreateAccount` | customer_id, currency | Account |
-| `GetAccount` | id | Account |
-| `ListAccounts` | customer_id | Account[] |
-| `Deposit` | account_id, amount, ref, desc | Transaction + balance_after |
-| `Withdraw` | account_id, amount, ref, desc | Transaction + balance_after |
-| `Transfer` | from_account_id, to_account_id, amount, fee | TransferResponse (from/to account state) |
-| `GetTransactionHistory` | account_id, limit, offset | Transaction[] + pagination |
-| `GetAuditLogs` | table_name, record_id | AuditLog[] |
-| `Login` | email, password | access_token, expires_at |
-
----
-
-## 🧪 Testing
+### Example: Create Customer
 
 ```bash
-# Unit tests (real PostgreSQL test container)
-go test ./internal/repository/... -v -count=1
-
-# All tests with coverage
-go test ./... -coverprofile=coverage.out
-go tool cover -html=coverage.out
-
-# Integration tests (full gRPC → DB)
-go test ./test/integration/... -v -tags=integration
+grpcurl -plaintext -d '{"name":"John Doe","email":"john@example.com","password":"SecureP@ss1"}' \
+  localhost:9090 simplebank.SimpleBank/CreateCustomer
 ```
 
-**Coverage target:** ≥ 80% untuk `internal/repository/` dan `internal/controller/`
+### Example: Transfer
+
+```bash
+grpcurl -plaintext -d '{"from_account_id":1,"to_account_id":2,"amount":"100000.00","fee":"2500.00"}' \
+  localhost:9090 simplebank.SimpleBank/Transfer
+```
 
 ---
 
-## 🐳 Production Deployment
+## Database Schema (ERD)
 
-### Docker Image
+```
+customers ──< accounts >── transactions
+                    │
+                    └──< transfers >── accounts (self-referential)
+                    
+All mutating tables → audit_logs (via PostgreSQL triggers)
+```
+
+Key tables:
+- `customers` — id, name, email (unique), password_hash, is_active
+- `accounts` — id, customer_id, account_number (unique), currency, balance (DECIMAL 18,2), status
+- `transactions` — id, account_id, type (deposit/withdrawal), amount, balance_before, balance_after
+- `transfers` — id, from_account_id, to_account_id, amount, fee, status (pending/completed/failed)
+- `audit_logs` — table_name, record_id, operation, old_values (JSONB), new_values (JSONB), changed_by
+
+---
+
+## Security
+
+- **Passwords**: bcrypt cost 12, never logged
+- **Tokens**: PASETO (preferred) or JWT HS256, 15min access / 24h refresh
+- **Transport**: TLS 1.3 in production (gRPC credentials)
+- **SQL Injection**: 100% parameterized via SQLC
+- **Secrets**: Environment variables only, `.env` in `.gitignore`
+
+---
+
+## Testing
 
 ```bash
+# Unit tests (with real PostgreSQL test container)
+make test
+
+# Coverage report
+go test ./... -coverprofile=coverage.out && go tool cover -html=coverage.out
+
+# Integration tests (full gRPC → DB flow)
+make test-integration
+```
+
+Target coverage: **≥ 80%** for `internal/` packages.
+
+---
+
+## Deployment
+
+### Docker (Production)
+
+```bash
+# Build
 docker build -t simple-bank:latest .
-docker run -p 9090:9090 --env-file .env simple-bank:latest
-```
 
-- Multi-stage build (builder → alpine runtime)
-- Non-root user (`appuser`)
-- Image size < 25MB
-- Healthcheck endpoint included
+# Run (with external PostgreSQL/Redis)
+docker run -d \
+  -p 9090:9090 \
+  -e POSTGRES_HOST=your-db-host \
+  -e POSTGRES_PASSWORD=your-password \
+  -e TOKEN_SYMMETRIC_KEY=your-32-byte-key \
+  simple-bank:latest
+```
 
 ### Kubernetes (Planned)
 
@@ -234,50 +283,48 @@ k8s/
 ├── configmap.yaml
 ├── secret.yaml
 ├── api/deployment.yaml + service.yaml + hpa.yaml + ingress.yaml
-├── postgres/ (PVC, Deployment, Service)
-└── redis/  (Deployment, Service)
+├── postgres/pvc.yaml + deployment.yaml + service.yaml
+└── redis/deployment.yaml + service.yaml
 ```
 
 ### AWS (Planned)
 
-- **EKS** — Managed Kubernetes
-- **RDS PostgreSQL** — Multi-AZ, automated backup
-- **ElastiCache Redis** — Managed Redis
-- **ECR** — Container registry
-- **ALB** — Load balancer
-- **Secrets Manager** — DB passwords, token keys
+- **EKS** for Kubernetes
+- **RDS PostgreSQL** (Multi-AZ)
+- **ElastiCache Redis**
+- **ECR** for images
+- **Route 53** + **ACM** + **ALB**
 
 ---
 
-## 📚 Dokumentasi Lengkap
+## Documentation
 
-- **[DOC.md](DOC.md)** — Panduan teknis lengkap (database, SQLC, gRPC, Docker, K8s, AWS)
-- **[requirements.md](requirements.md)** — Functional & non-functional requirements, user stories
-- **[tasks.md](tasks.md)** — Implementation task tracking dengan dependency graph
-- **[steering/](steering/)** — Architecture decisions, code conventions, API standards, security policies
-
----
-
-## 🤝 Contributing
-
-1. Fork repo
-2. Buat feature branch: `git checkout -b feature/nama-fitur`
-3. Commit changes: `git commit -m "feat: deskripsi singkat"`
-4. Push: `git push origin feature/nama-fitur`
-5. Buat Pull Request
-
-**Code style:** `goimports`, `golangci-lint` — run `make fmt && make lint` sebelum commit.
+- **[DOC.md](DOC.md)** — Comprehensive technical documentation (Indonesian)
+- **[requirements.md](requirements.md)** — Functional/non-functional requirements, user stories
+- **[tasks.md](tasks.md)** — Implementation task tracker with dependencies
+- **[steering/](steering/)** — Architecture decision records & standards
 
 ---
 
-## 📄 License
+## Contributing
 
-MIT License — bebas digunakan, dimodifikasi, didistribusikan.
+1. Fork the repo
+2. Create feature branch: `git checkout -b feat/amazing-feature`
+3. Follow code conventions: `make fmt && make lint`
+4. Write tests for new functionality
+5. Ensure `make test` passes
+6. Submit PR with clear description
 
 ---
 
-## 👨‍💻 Author
+## License
 
-**Choirul Anwar** — [@choirulanwar](https://github.com/choirulanwar)
+MIT License — see [LICENSE](LICENSE) for details.
 
-*Project ini dibuat sebagai learning project & portfolio backend banking system.*
+---
+
+## Author
+
+**Choirul Anwar** — [@choirulanwarr](https://github.com/choirulanwarr)
+
+*Built as a learning project demonstrating modern Go backend practices.*

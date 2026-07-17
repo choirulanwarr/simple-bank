@@ -13,6 +13,7 @@ import (
 	"github.com/choirulanwar/simple-bank/internal/config"
 	"github.com/choirulanwar/simple-bank/internal/middleware"
 	"github.com/choirulanwar/simple-bank/internal/repository"
+	"github.com/choirulanwar/simple-bank/pkg/token"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/api"
 	"github.com/choirulanwar/simple-bank/api/pb"
@@ -46,10 +47,16 @@ func main() {
 	repo := repository.NewAccountRepo(store, pool)
 	custRepo := repository.NewCustomerRepo(store)
 
+	// Create token maker
+	tokenMaker, err := token.NewPasetoMaker(cfg.TokenSymmetricKey)
+	if err != nil {
+		log.Fatalf("failed to create token maker: %v", err)
+	}
+
 	// Create handlers
 	customerHandler := api.NewCustomerHandler(custRepo)
 	accountHandler := api.NewAccountHandler(repo)
-	transactionHandler := api.NewTransactionHandler(repo)
+	transactionHandler := api.NewTransactionHandler(repo, custRepo, tokenMaker)
 
 	// gRPC Server with interceptors
 	grpcServer := grpc.NewServer(

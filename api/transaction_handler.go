@@ -2,9 +2,11 @@ package api
 
 import (
 	"context"
+	"time"
 
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/internal/repository"
+	"github.com/choirulanwar/simple-bank/pkg/token"
 	"github.com/choirulanwar/simple-bank/api/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -12,12 +14,14 @@ import (
 )
 
 type TransactionHandler struct {
-	repo *repository.AccountRepo
+	repo      *repository.AccountRepo
+	custRepo  *repository.CustomerRepo
+	tokenMaker token.Maker
 	pb.UnimplementedSimpleBankServer
 }
 
-func NewTransactionHandler(repo *repository.AccountRepo) *TransactionHandler {
-	return &TransactionHandler{repo: repo}
+func NewTransactionHandler(repo *repository.AccountRepo, custRepo *repository.CustomerRepo, tokenMaker token.Maker) *TransactionHandler {
+	return &TransactionHandler{repo: repo, custRepo: custRepo, tokenMaker: tokenMaker}
 }
 
 func (h *TransactionHandler) Deposit(ctx context.Context, req *pb.DepositRequest) (*pb.DepositResponse, error) {
@@ -190,6 +194,45 @@ func (h *TransactionHandler) GetAuditLogs(ctx context.Context, req *pb.GetAuditL
 
 	return &pb.GetAuditLogsResponse{
 		Logs: protoLogs,
+	}, nil
+}
+
+func (h *TransactionHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	if req.Email == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "email is required")
+	}
+	if req.Password == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "password is required")
+	}
+
+	// Find customer by email
+	customer, err := h.custRepo.GetCustomerByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid credentials")
+	}
+
+	// Check if customer is active
+	if !customer.IsActive {
+		return nil, status.Errorf(codes.Unauthenticated, "account deactivated")
+	}
+
+	// Verify password
+	err = h.custRepo.VerifyPassword(ctx, customer.PasswordHash, req.Password)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid credentials")
+	}
+
+	// Generate token
+	accessTokenDuration := time.Hour * 24 // 24 hours
+	token, payload, err := h.tokenMaker.CreateToken(customer.ID, accessTokenDuration)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create token: %v", err)
+	}
+
+	return &pb.LoginResponse{
+		AccessToken: token,
+		TokenType:   "Bearer",
+		ExpiresAt:   timestamppb.New(payload.ExpiredAt),
 	}, nil
 }
 

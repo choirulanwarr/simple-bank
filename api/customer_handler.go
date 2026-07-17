@@ -101,3 +101,41 @@ func (h *CustomerHandler) customerToProto(c sqlc.Customer) *pb.Customer {
 		UpdatedAt: timestamppb.New(c.UpdatedAt),
 	}
 }
+
+func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomerRequest) (*pb.UpdateCustomerResponse, error) {
+	if req.Id <= 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid customer ID")
+	}
+
+	customer, err := h.repo.UpdateCustomer(ctx, repository.UpdateCustomerParams{
+		ID:        req.Id,
+		Name:      req.Name,
+		Email:     req.Email,
+		IsActive:  req.IsActive,
+	})
+	if err != nil {
+		if err.Error() == "email already registered" {
+			return nil, status.Errorf(codes.AlreadyExists, "email already registered")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to update customer: %v", err)
+	}
+
+	return &pb.UpdateCustomerResponse{
+		Customer: h.customerToProto(customer),
+	}, nil
+}
+
+func (h *CustomerHandler) DeleteCustomer(ctx context.Context, req *pb.DeleteCustomerRequest) (*pb.DeleteCustomerResponse, error) {
+	if req.Id <= 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid customer ID")
+	}
+
+	err := h.repo.DeleteCustomer(ctx, req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete customer: %v", err)
+	}
+
+	return &pb.DeleteCustomerResponse{
+		Success: true,
+	}, nil
+}

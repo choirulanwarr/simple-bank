@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -10,7 +11,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/choirulanwar/simple-bank/internal/config"
-	// "github.com/choirulanwar/simple-bank/db/sqlc"
+	"github.com/choirulanwar/simple-bank/internal/middleware"
+	"github.com/choirulanwar/simple-bank/internal/repository"
+	"github.com/choirulanwar/simple-bank/db/sqlc"
+	"github.com/choirulanwar/simple-bank/api"
+	"github.com/choirulanwar/simple-bank/api/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -20,6 +25,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+
+	// Setup logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL())
@@ -33,9 +41,31 @@ func main() {
 	}
 	log.Println("✅ Connected to PostgreSQL")
 
-	// store := sqlc.New(pool)
+	// Initialize layers
+	store := sqlc.New(pool)
+	repo := repository.NewAccountRepo(store, pool)
+	custRepo := repository.NewCustomerRepo(store)
 
-	grpcServer := grpc.NewServer()
+	// Create handlers
+	customerHandler := api.NewCustomerHandler(custRepo)
+	accountHandler := api.NewAccountHandler(repo)
+	transactionHandler := api.NewTransactionHandler(repo)
+
+	// gRPC Server with interceptors
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.ChainUnaryInterceptors(
+			middleware.RecoveryInterceptor(),
+			middleware.LoggingInterceptor(logger),
+		)),
+	)
+
+	// Register services
+	pb.RegisterSimpleBankServer(grpcServer, api.NewSimpleBankServer(
+		customerHandler,
+		accountHandler,
+		transactionHandler,
+	))
+
 	reflection.Register(grpcServer)
 
 	lis, err := net.Listen("tcp", cfg.GRPCServerAddress)

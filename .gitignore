@@ -30,4 +30,4 @@ coverage.html
 .DS_Store
 
 # Build
-vendor/
+vendor/server

@@ -5,8 +5,6 @@ option go_package = "github.com/choirulanwar/simple-bank/api/pb";
 
 import "google/protobuf/timestamp.proto";
 
-import "google/protobuf/timestamp.proto";
-
 service SimpleBank {
   // Customers
   rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
@@ -234,5 +232,5 @@ message LoginRequest {
 message LoginResponse {
   string access_token = 1;
   string token_type = 2;
-  google.protogoogle.protobuf.Timestamp expires_at = 3;
+  google.protobuf.Timestamp expires_at = 3;
 }

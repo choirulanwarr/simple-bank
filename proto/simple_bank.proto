@@ -1,0 +1,238 @@
+syntax = "proto3";
+
+package simplebank;
+option go_package = "github.com/choirulanwar/simple-bank/api/pb";
+
+import "google/protobuf/timestamp.proto";
+
+import "google/protobuf/timestamp.proto";
+
+service SimpleBank {
+  // Customers
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
+  rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse);
+
+  // Accounts
+  rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse);
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  rpc UpdateAccountStatus(UpdateAccountStatusRequest) returns (UpdateAccountStatusResponse);
+
+  // Transactions
+  rpc Deposit(DepositRequest) returns (DepositResponse);
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse);
+  rpc Transfer(TransferRequest) returns (TransferResponse);
+  rpc GetTransactionHistory(GetTransactionHistoryRequest) returns (GetTransactionHistoryResponse);
+
+  // Audit
+  rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse);
+
+  // Auth
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
+
+// --- Customers ---
+message CreateCustomerRequest {
+  string name = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message CreateCustomerResponse {
+  Customer customer = 1;
+}
+
+message GetCustomerRequest {
+  int64 id = 1;
+}
+
+message GetCustomerResponse {
+  Customer customer = 1;
+}
+
+message ListCustomersRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListCustomersResponse {
+  repeated Customer customers = 1;
+  int64 total_count = 2;
+  bool has_more = 3;
+}
+
+message UpdateCustomerRequest {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  bool is_active = 4;
+}
+
+message UpdateCustomerResponse {
+  Customer customer = 1;
+}
+
+message DeleteCustomerRequest {
+  int64 id = 1;
+}
+
+message DeleteCustomerResponse {
+  bool success = 1;
+}
+
+message Customer {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  bool is_active = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// --- Accounts ---
+message CreateAccountRequest {
+  int64 customer_id = 1;
+  string currency = 2;
+}
+
+message CreateAccountResponse {
+  Account account = 1;
+}
+
+message GetAccountRequest {
+  int64 id = 1;
+}
+
+message GetAccountResponse {
+  Account account = 1;
+}
+
+message ListAccountsRequest {
+  int64 customer_id = 1;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+message UpdateAccountStatusRequest {
+  int64 id = 1;
+  string status = 2;
+}
+
+message UpdateAccountStatusResponse {
+  Account account = 1;
+}
+
+message Account {
+  int64 id = 1;
+  int64 customer_id = 2;
+  string account_number = 3;
+  string currency = 4;
+  string balance = 5;
+  string status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// --- Transactions ---
+message DepositRequest {
+  int64 account_id = 1;
+  string amount = 2;
+  string reference = 3;
+  string description = 4;
+}
+
+message DepositResponse {
+  Transaction transaction = 1;
+  string balance_after = 2;
+}
+
+message WithdrawRequest {
+  int64 account_id = 1;
+  string amount = 2;
+  string reference = 3;
+  string description = 4;
+}
+
+message WithdrawResponse {
+  Transaction transaction = 1;
+  string balance_after = 2;
+}
+
+message TransferRequest {
+  int64 from_account_id = 1;
+  int64 to_account_id = 2;
+  string amount = 3;
+  string fee = 4;
+  string reference = 5;
+  string description = 6;
+}
+
+message TransferResponse {
+  int64 transfer_id = 1;
+  string status = 2;
+  string amount = 3;
+  Account from_account = 4;
+  Account to_account = 5;
+}
+
+message GetTransactionHistoryRequest {
+  int64 account_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetTransactionHistoryResponse {
+  repeated Transaction transactions = 1;
+  int64 total_count = 2;
+  bool has_more = 3;
+}
+
+message Transaction {
+  int64 id = 1;
+  int64 account_id = 2;
+  string type = 3;
+  string amount = 4;
+  string balance_before = 5;
+  string balance_after = 6;
+  string reference = 7;
+  string description = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+// --- Audit ---
+message GetAuditLogsRequest {
+  string table_name = 1;
+  int64 record_id = 2;
+}
+
+message GetAuditLogsResponse {
+  repeated AuditLog logs = 1;
+}
+
+message AuditLog {
+  int64 id = 1;
+  string table_name = 2;
+  int64 record_id = 3;
+  string operation = 4;
+  string old_values = 5;
+  string new_values = 6;
+  string changed_by = 7;
+  google.protobuf.Timestamp changed_at = 8;
+}
+
+// --- Auth ---
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string token_type = 2;
+  google.protogoogle.protobuf.Timestamp expires_at = 3;
+}

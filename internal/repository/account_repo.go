@@ -110,6 +110,29 @@ func (r *AccountRepo) UpdateAccountStatus(ctx context.Context, id int64, status 
 	return account, nil
 }
 
+func (r *AccountRepo) ListTransactionsByAccount(ctx context.Context, accountID int64, limit, offset int32) ([]sqlc.Transaction, error) {
+	transactions, err := r.store.ListTransactionsByAccount(ctx, sqlc.ListTransactionsByAccountParams{
+		AccountID: accountID,
+		Limit:     limit,
+		Offset:    offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list transactions by account: %w", err)
+	}
+	return transactions, nil
+}
+
+func (r *AccountRepo) ListAuditLogsByRecord(ctx context.Context, tableName string, recordID int64) ([]sqlc.AuditLog, error) {
+	logs, err := r.store.ListAuditLogsByRecord(ctx, sqlc.ListAuditLogsByRecordParams{
+		TableName: tableName,
+		RecordID:  recordID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list audit logs by record: %w", err)
+	}
+	return logs, nil
+}
+
 type DepositParams struct {
 	AccountID   int64
 	Amount      string

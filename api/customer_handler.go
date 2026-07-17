@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/internal/repository"
@@ -37,8 +38,12 @@ func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *pb.CreateCust
 		Password: req.Password,
 	})
 	if err != nil {
-		if err.Error() == "email already registered" {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "email already registered") {
 			return nil, status.Errorf(codes.AlreadyExists, "email already registered")
+		}
+		if strings.Contains(errMsg, "invalid email format") {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid email format")
 		}
 		return nil, status.Errorf(codes.Internal, "failed to create customer: %v", err)
 	}

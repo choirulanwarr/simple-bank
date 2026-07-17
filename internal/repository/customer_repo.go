@@ -82,3 +82,31 @@ func (r *CustomerRepo) ListCustomers(ctx context.Context, limit, offset int32) (
 	}
 	return customers, nil
 }
+
+func (r *CustomerRepo) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (sqlc.Customer, error) {
+	customer, err := r.store.UpdateCustomer(ctx, sqlc.UpdateCustomerParams{
+		ID:        arg.ID,
+		Name:      arg.Name,
+		Email:     arg.Email,
+		IsActive:  arg.IsActive,
+	})
+	if err != nil {
+		return sqlc.Customer{}, fmt.Errorf("update customer: %w", err)
+	}
+	return customer, nil
+}
+
+func (r *CustomerRepo) DeleteCustomer(ctx context.Context, id int64) error {
+	err := r.store.DeleteCustomer(ctx, id)
+	if err != nil {
+		return fmt.Errorf("delete customer: %w", err)
+	}
+	return nil
+}
+
+type UpdateCustomerParams struct {
+	ID       int64
+	Name     string
+	Email    string
+	IsActive bool
+}

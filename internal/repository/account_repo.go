@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"time"
 
+	"github.com/choirulanwar/simple-bank/internal/cache"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,6 +18,7 @@ type AccountRepo struct {
 	store   sqlc.Querier
 	queries *sqlc.Queries
 	pool    *pgxpool.Pool
+	cache   *cache.Cache
 }
 
 func NewAccountRepo(store sqlc.Querier, pool *pgxpool.Pool) *AccountRepo {
@@ -24,6 +27,10 @@ func NewAccountRepo(store sqlc.Querier, pool *pgxpool.Pool) *AccountRepo {
 		panic("store must be *sqlc.Queries")
 	}
 	return &AccountRepo{store: store, queries: queries, pool: pool}
+}
+
+func (r *AccountRepo) SetCache(c *cache.Cache) {
+	r.cache = c
 }
 
 func (r *AccountRepo) generateAccountNumber() string {
@@ -76,10 +83,24 @@ func (r *AccountRepo) CreateAccount(ctx context.Context, arg CreateAccountParams
 }
 
 func (r *AccountRepo) GetAccount(ctx context.Context, id int64) (sqlc.Account, error) {
+	// Try cache first
+	if r.cache != nil {
+		var account sqlc.Account
+		if err := r.cache.Get(ctx, cache.AccountKey(id), &account); err == nil {
+			return account, nil
+		}
+	}
+
 	account, err := r.store.GetAccount(ctx, id)
 	if err != nil {
 		return sqlc.Account{}, fmt.Errorf("get account: %w", err)
 	}
+
+	// Populate cache (short TTL — balance can change)
+	if r.cache != nil {
+		_ = r.cache.Set(ctx, cache.AccountKey(id), &account, 30*time.Second)
+	}
+
 	return account, nil
 }
 
@@ -218,6 +239,11 @@ func (r *AccountRepo) Deposit(ctx context.Context, arg DepositParams) (Transacti
 		return TransactionResult{}, err
 	}
 
+	// Invalidate cache after write
+	if r.cache != nil {
+		_ = r.cache.Del(ctx, cache.AccountKey(arg.AccountID))
+	}
+
 	return result, nil
 }
 
@@ -289,6 +315,11 @@ func (r *AccountRepo) Withdraw(ctx context.Context, arg WithdrawParams) (Transac
 
 	if err != nil {
 		return TransactionResult{}, err
+	}
+
+	// Invalidate cache after write
+	if r.cache != nil {
+		_ = r.cache.Del(ctx, cache.AccountKey(arg.AccountID))
 	}
 
 	return result, nil
@@ -464,6 +495,11 @@ func (r *AccountRepo) TransferTx(ctx context.Context, arg TransferTxParams) (Tra
 
 	if err != nil {
 		return TransferTxResult{}, err
+	}
+
+	// Invalidate cache for both accounts after transfer
+	if r.cache != nil {
+		_ = r.cache.Del(ctx, cache.AccountKey(arg.FromAccountID), cache.AccountKey(arg.ToAccountID))
 	}
 
 	return result, nil

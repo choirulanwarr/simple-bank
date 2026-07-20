@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/choirulanwar/simple-bank/api"
 	"github.com/choirulanwar/simple-bank/api/pb"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
+	"github.com/choirulanwar/simple-bank/internal/cache"
 	"github.com/choirulanwar/simple-bank/internal/config"
 	"github.com/choirulanwar/simple-bank/internal/middleware"
 	"github.com/choirulanwar/simple-bank/internal/repository"
@@ -62,10 +64,22 @@ func main() {
 	}
 	slog.Info("connected to PostgreSQL")
 
+	// Initialize cache
+	redisAddr := fmt.Sprintf("%s:%d", cfg.RedisHost, cfg.RedisPort)
+	cacheClient := cache.New(redisAddr)
+	defer cacheClient.Close()
+	if err := cacheClient.Ping(ctx); err != nil {
+		slog.Warn("redis not available, caching disabled", "error", err)
+	} else {
+		slog.Info("redis connected, caching enabled", "addr", redisAddr)
+	}
+
 	// Initialize layers
 	store := sqlc.New(pool)
 	repo := repository.NewAccountRepo(store, pool)
 	custRepo := repository.NewCustomerRepo(store)
+	repo.SetCache(cacheClient)
+	custRepo.SetCache(cacheClient)
 
 	// Create token maker
 	tokenMaker, err := token.NewPasetoMaker(cfg.TokenSymmetricKey)

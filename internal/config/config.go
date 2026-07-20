@@ -27,21 +27,29 @@ func Load() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
 
+	// Baca .env — optional, fallback ke env vars
 	if err := viper.ReadInConfig(); err != nil {
-		// Check if it's a "file not found" error (either viper.ConfigFileNotFoundError or os.PathError)
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			// Check for os.PathError (when .env file doesn't exist)
 			var pathErr *os.PathError
 			if !errors.As(err, &pathErr) {
 				return nil, err
 			}
 		}
-		// .env file not found is OK, continue with env vars only
 	}
 
-	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, err
+	// Baca satu-per-satu via Get() — AutomaticEnv() cuma jalan lewat Get(), bukan AllSettings/Unmarshal
+	cfg := Config{
+		DBHost:              viper.GetString("POSTGRES_HOST"),
+		DBPort:              viper.GetInt("POSTGRES_PORT"),
+		DBUser:              viper.GetString("POSTGRES_USER"),
+		DBPassword:          viper.GetString("POSTGRES_PASSWORD"),
+		DBName:              viper.GetString("POSTGRES_DB"),
+		GRPCServerAddress:   viper.GetString("GRPC_SERVER_ADDRESS"),
+		TokenSymmetricKey:   viper.GetString("TOKEN_SYMMETRIC_KEY"),
+		AccessTokenDuration: viper.GetDuration("ACCESS_TOKEN_DURATION"),
+		RefreshTokenDuration: viper.GetDuration("REFRESH_TOKEN_DURATION"),
+		RedisHost:           viper.GetString("REDIS_HOST"),
+		RedisPort:           viper.GetInt("REDIS_PORT"),
 	}
 	return &cfg, nil
 }

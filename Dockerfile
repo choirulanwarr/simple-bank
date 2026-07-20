@@ -3,40 +3,26 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache git ca-certificates
+RUN apk add --no-cache ca-certificates upx binutils
 
-# Cache dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source
 COPY . .
 
-# Install tools
-RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-RUN go install github.com/bufbuild/buf/cmd/buf@latest
-
-# Generate code
-RUN sqlc generate
-RUN buf generate proto/
-
-# Build binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -buildid=" -o /server ./cmd/server && \
+    strip /server && upx --best --lzma /server
 
 # Stage 2: Run
 FROM alpine:3.20
 
-RUN apk --no-cache add ca-certificates tzdata
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apk --no-cache add ca-certificates && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup
 
-WORKDIR /app
-
-COPY --from=builder /server .
-COPY --from=builder /app/.env .env
+COPY --from=builder /server /server
 
 USER appuser
 
 EXPOSE 9090
 
-ENTRYPOINT ["./server"]
+ENTRYPOINT ["/server"]

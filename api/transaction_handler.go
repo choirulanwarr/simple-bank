@@ -4,18 +4,18 @@ import (
 	"context"
 	"time"
 
+	"github.com/choirulanwar/simple-bank/api/pb"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/internal/repository"
 	"github.com/choirulanwar/simple-bank/pkg/token"
-	"github.com/choirulanwar/simple-bank/api/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type TransactionHandler struct {
-	repo      *repository.AccountRepo
-	custRepo  *repository.CustomerRepo
+	repo       *repository.AccountRepo
+	custRepo   *repository.CustomerRepo
 	tokenMaker token.Maker
 	pb.UnimplementedSimpleBankServer
 }
@@ -52,8 +52,8 @@ func (h *TransactionHandler) Deposit(ctx context.Context, req *pb.DepositRequest
 	}
 
 	return &pb.DepositResponse{
-		Transaction:     h.transactionToProto(result.Transaction),
-		BalanceAfter:    result.Balance,
+		Transaction:  h.transactionToProto(result.Transaction),
+		BalanceAfter: result.Balance,
 	}, nil
 }
 
@@ -251,28 +251,28 @@ func (h *TransactionHandler) accountToProto(a sqlc.Account) *pb.Account {
 
 func (h *TransactionHandler) transactionToProto(t sqlc.Transaction) *pb.Transaction {
 	return &pb.Transaction{
-		Id:             t.ID,
-		AccountId:      t.AccountID,
-		Type:           t.Type,
-		Amount:         t.Amount.StringFixed(2),
-		BalanceBefore:  t.BalanceBefore.StringFixed(2),
-		BalanceAfter:   t.BalanceAfter.StringFixed(2),
-		Reference:      derefString(t.Reference),
-		Description:    derefString(t.Description),
-		CreatedAt:      timestamppb.New(t.CreatedAt),
+		Id:            t.ID,
+		AccountId:     t.AccountID,
+		Type:          t.Type,
+		Amount:        t.Amount.StringFixed(2),
+		BalanceBefore: t.BalanceBefore.StringFixed(2),
+		BalanceAfter:  t.BalanceAfter.StringFixed(2),
+		Reference:     derefString(t.Reference),
+		Description:   derefString(t.Description),
+		CreatedAt:     timestamppb.New(t.CreatedAt),
 	}
 }
 
 func (h *TransactionHandler) auditLogToProto(a sqlc.AuditLog) *pb.AuditLog {
 	return &pb.AuditLog{
-		Id:          a.ID,
-		TableName:   a.TableName,
-		RecordId:    a.RecordID,
-		Operation:   a.Operation,
-		OldValues:   string(a.OldValues),
-		NewValues:   string(a.NewValues),
-		ChangedBy:   derefString(a.ChangedBy),
-		ChangedAt:   timestamppb.New(a.ChangedAt),
+		Id:        a.ID,
+		TableName: a.TableName,
+		RecordId:  a.RecordID,
+		Operation: a.Operation,
+		OldValues: string(a.OldValues),
+		NewValues: string(a.NewValues),
+		ChangedBy: derefString(a.ChangedBy),
+		ChangedAt: timestamppb.New(a.ChangedAt),
 	}
 }
 

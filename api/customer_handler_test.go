@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/choirulanwar/simple-bank/api/pb"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/internal/mock"
 	"github.com/choirulanwar/simple-bank/internal/repository"
-	"github.com/choirulanwar/simple-bank/api/pb"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
@@ -117,7 +117,7 @@ func TestCustomerHandler_GetCustomer(t *testing.T) {
 		require.Equal(t, customer.ID, resp.Customer.Id)
 	})
 
-t.Run("Not Found", func(t *testing.T) {
+	t.Run("Not Found", func(t *testing.T) {
 		mockQuerier.EXPECT().
 			GetCustomer(gomock.Any(), int64(999)).
 			Return(sqlc.Customer{}, fmt.Errorf("customer not found"))

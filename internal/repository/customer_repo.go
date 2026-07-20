@@ -85,10 +85,10 @@ func (r *CustomerRepo) ListCustomers(ctx context.Context, limit, offset int32) (
 
 func (r *CustomerRepo) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (sqlc.Customer, error) {
 	customer, err := r.store.UpdateCustomer(ctx, sqlc.UpdateCustomerParams{
-		ID:        arg.ID,
-		Name:      arg.Name,
-		Email:     arg.Email,
-		IsActive:  arg.IsActive,
+		ID:       arg.ID,
+		Name:     arg.Name,
+		Email:    arg.Email,
+		IsActive: arg.IsActive,
 	})
 	if err != nil {
 		return sqlc.Customer{}, fmt.Errorf("update customer: %w", err)

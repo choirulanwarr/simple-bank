@@ -20,11 +20,11 @@ func decStrEq(actual decimal.Decimal, expected string) bool {
 
 type AccountRepoTestSuite struct {
 	suite.Suite
-	pool         *pgxpool.Pool
-	repo         *AccountRepo
-	repoCust     *CustomerRepo
-	store        sqlc.Querier
-	custID       int64
+	pool          *pgxpool.Pool
+	repo          *AccountRepo
+	repoCust      *CustomerRepo
+	store         sqlc.Querier
+	custID        int64
 	fromAccountID int64
 }
 

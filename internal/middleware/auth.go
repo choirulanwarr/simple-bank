@@ -61,7 +61,7 @@ func GetUserIDFromContext(ctx context.Context) (int64, bool) {
 
 func isPublicMethod(fullMethod string) bool {
 	publicMethods := map[string]bool{
-		"/simplebank.SimpleBank/Login":        true,
+		"/simplebank.SimpleBank/Login":          true,
 		"/simplebank.SimpleBank/CreateCustomer": true,
 	}
 

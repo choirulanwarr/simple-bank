@@ -19,8 +19,7 @@
 docker-compose.override.yml
 
 # Generated
-db/sqlc/
-api/pb/
+# db/sqlc/ and api/pb/ are committed to repo (needed for CI)
 
 # Test coverage
 coverage.out

@@ -106,7 +106,7 @@ func (h *AccountHandler) accountToProto(a sqlc.Account) *pb.Account {
 		CustomerId:    a.CustomerID,
 		AccountNumber: a.AccountNumber,
 		Currency:      a.Currency,
-		Balance:       a.Balance.String(),
+		Balance:       a.Balance.StringFixed(2),
 		Status:        a.Status,
 		CreatedAt:     timestamppb.New(a.CreatedAt),
 		UpdatedAt:     timestamppb.New(a.UpdatedAt),

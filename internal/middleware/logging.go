@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log/slog"
 	"time"
 
@@ -10,19 +12,36 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type ctxKey string
+
+const requestIDKey ctxKey = "request_id"
+
+func generateRequestID() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func GetRequestID(ctx context.Context) string {
+	if id, ok := ctx.Value(requestIDKey).(string); ok {
+		return id
+	}
+	return ""
+}
+
 func LoggingInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		start := time.Now()
+		requestID := generateRequestID()
+		ctx = context.WithValue(ctx, requestIDKey, requestID)
 
-		method := info.FullMethod
 		logger.InfoContext(ctx, "gRPC request started",
-			slog.String("method", method),
-			slog.String("type", "unary"),
+			slog.String("method", info.FullMethod),
+			slog.String("request_id", requestID),
 		)
 
 		resp, err = handler(ctx, req)
 
-		duration := time.Since(start)
 		st := status.Convert(err)
 		code := st.Code()
 
@@ -32,8 +51,9 @@ func LoggingInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 		}
 
 		logger.Log(ctx, level, "gRPC request completed",
-			slog.String("method", method),
-			slog.Duration("duration", duration),
+			slog.String("method", info.FullMethod),
+			slog.String("request_id", requestID),
+			slog.Duration("duration", time.Since(start)),
 			slog.String("code", code.String()),
 			slog.String("error", st.Message()),
 		)

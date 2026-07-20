@@ -21,6 +21,8 @@ type Config struct {
 	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
 	RedisHost            string        `mapstructure:"REDIS_HOST"`
 	RedisPort            int           `mapstructure:"REDIS_PORT"`
+	LogLevel             string        `mapstructure:"LOG_LEVEL"`
+	MetricsServerAddress string        `mapstructure:"METRICS_SERVER_ADDRESS"`
 }
 
 func Load() (*Config, error) {
@@ -50,6 +52,8 @@ func Load() (*Config, error) {
 		RefreshTokenDuration: viper.GetDuration("REFRESH_TOKEN_DURATION"),
 		RedisHost:            viper.GetString("REDIS_HOST"),
 		RedisPort:            viper.GetInt("REDIS_PORT"),
+		LogLevel:             viper.GetString("LOG_LEVEL"),
+		MetricsServerAddress: viper.GetString("METRICS_SERVER_ADDRESS"),
 	}
 	return &cfg, nil
 }

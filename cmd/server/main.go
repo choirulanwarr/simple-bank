@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +17,9 @@ import (
 	"github.com/choirulanwar/simple-bank/internal/repository"
 	"github.com/choirulanwar/simple-bank/pkg/token"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -24,23 +27,40 @@ import (
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
-	// Setup logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	// Setup logger with configurable level
+	logLevel := new(slog.LevelVar)
+	switch cfg.LogLevel {
+	case "debug":
+		logLevel.Set(slog.LevelDebug)
+	case "info":
+		logLevel.Set(slog.LevelInfo)
+	case "warn":
+		logLevel.Set(slog.LevelWarn)
+	case "error":
+		logLevel.Set(slog.LevelError)
+	default:
+		logLevel.Set(slog.LevelInfo)
+	}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+	slog.SetDefault(logger)
 
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL())
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer pool.Close()
 
 	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("failed to ping database: %v", err)
+		slog.Error("failed to ping database", "error", err)
+		os.Exit(1)
 	}
-	log.Println("✅ Connected to PostgreSQL")
+	slog.Info("connected to PostgreSQL")
 
 	// Initialize layers
 	store := sqlc.New(pool)
@@ -50,7 +70,8 @@ func main() {
 	// Create token maker
 	tokenMaker, err := token.NewPasetoMaker(cfg.TokenSymmetricKey)
 	if err != nil {
-		log.Fatalf("failed to create token maker: %v", err)
+		slog.Error("failed to create token maker", "error", err)
+		os.Exit(1)
 	}
 
 	// Create handlers
@@ -75,22 +96,78 @@ func main() {
 
 	reflection.Register(grpcServer)
 
+	// Prometheus metrics
+	promRegistry := prometheus.NewRegistry()
+	promRegistry.Register(collectors.NewGoCollector())
+	promRegistry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
+	grpcRequests := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "grpc_requests_total",
+		Help: "Total gRPC requests by method and status",
+	}, []string{"method", "status"})
+	promRegistry.MustRegister(grpcRequests)
+
+	// Update logging interceptor to track metrics
+	loggingInt := middleware.LoggingInterceptor(logger)
+	withMetrics := func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		resp, err := loggingInt(ctx, req, info, handler)
+		st := "ok"
+		if err != nil {
+			st = "error"
+		}
+		grpcRequests.WithLabelValues(info.FullMethod, st).Inc()
+		return resp, err
+	}
+
+	grpcServer = grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.ChainUnaryInterceptors(
+			middleware.RecoveryInterceptor(),
+			withMetrics,
+		)),
+	)
+
+	pb.RegisterSimpleBankServer(grpcServer, api.NewSimpleBankServer(
+		customerHandler,
+		accountHandler,
+		transactionHandler,
+	))
+	reflection.Register(grpcServer)
+
+	// Metrics HTTP server
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{}))
+	metricsSrv := &http.Server{
+		Addr:    cfg.MetricsServerAddress,
+		Handler: metricsMux,
+	}
+
 	lis, err := net.Listen("tcp", cfg.GRPCServerAddress)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		slog.Error("failed to listen gRPC", "address", cfg.GRPCServerAddress, "error", err)
+		os.Exit(1)
 	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("🚀 gRPC server listening on %s", cfg.GRPCServerAddress)
+		slog.Info("gRPC server starting", "address", cfg.GRPCServerAddress)
 		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("failed to serve gRPC: %v", err)
+			slog.Error("gRPC server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	<-quit
-	log.Println("🛑 Shutting down server...")
+	go func() {
+		slog.Info("metrics server starting", "address", cfg.MetricsServerAddress)
+		if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("metrics server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	sig := <-quit
+	slog.Info("shutting down server", "signal", sig.String())
 	grpcServer.GracefulStop()
+	metricsSrv.Close()
 }

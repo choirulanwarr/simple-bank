@@ -22,6 +22,8 @@ ACCESS_TOKEN_DURATION=15m
 REFRESH_TOKEN_DURATION=24h
 REDIS_HOST=localhost
 REDIS_PORT=6379
+LOG_LEVEL=info
+METRICS_SERVER_ADDRESS=0.0.0.0:9091
 `
 	err := os.WriteFile(".env.test", []byte(envContent), 0644)
 	require.NoError(t, err)
@@ -47,6 +49,8 @@ REDIS_PORT=6379
 	require.Equal(t, 24*time.Hour, cfg.RefreshTokenDuration)
 	require.Equal(t, "localhost", cfg.RedisHost)
 	require.Equal(t, 6379, cfg.RedisPort)
+	require.Equal(t, "info", cfg.LogLevel)
+	require.Equal(t, "0.0.0.0:9091", cfg.MetricsServerAddress)
 }
 
 func TestLoad_WithoutEnvFile(t *testing.T) {
@@ -65,6 +69,8 @@ func TestLoad_WithoutEnvFile(t *testing.T) {
 	_ = os.Setenv("REFRESH_TOKEN_DURATION", "48h")
 	_ = os.Setenv("REDIS_HOST", "env-redis")
 	_ = os.Setenv("REDIS_PORT", "6380")
+	_ = os.Setenv("LOG_LEVEL", "warn")
+	_ = os.Setenv("METRICS_SERVER_ADDRESS", "0.0.0.0:9092")
 
 	defer func() {
 		_ = os.Unsetenv("POSTGRES_HOST")
@@ -78,6 +84,8 @@ func TestLoad_WithoutEnvFile(t *testing.T) {
 		_ = os.Unsetenv("REFRESH_TOKEN_DURATION")
 		_ = os.Unsetenv("REDIS_HOST")
 		_ = os.Unsetenv("REDIS_PORT")
+		_ = os.Unsetenv("LOG_LEVEL")
+		_ = os.Unsetenv("METRICS_SERVER_ADDRESS")
 	}()
 
 	cfg, err := Load()
@@ -95,6 +103,8 @@ func TestLoad_WithoutEnvFile(t *testing.T) {
 	require.Equal(t, 48*time.Hour, cfg.RefreshTokenDuration)
 	require.Equal(t, "env-redis", cfg.RedisHost)
 	require.Equal(t, 6380, cfg.RedisPort)
+	require.Equal(t, "warn", cfg.LogLevel)
+	require.Equal(t, "0.0.0.0:9092", cfg.MetricsServerAddress)
 }
 
 func TestDatabaseURL(t *testing.T) {

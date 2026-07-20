@@ -13,9 +13,9 @@ import (
 )
 
 type AccountRepo struct {
-	store sqlc.Querier
+	store   sqlc.Querier
 	queries *sqlc.Queries
-	pool  *pgxpool.Pool
+	pool    *pgxpool.Pool
 }
 
 func NewAccountRepo(store sqlc.Querier, pool *pgxpool.Pool) *AccountRepo {
@@ -293,6 +293,7 @@ func (r *AccountRepo) Withdraw(ctx context.Context, arg WithdrawParams) (Transac
 
 	return result, nil
 }
+
 type TransferTxParams struct {
 	FromAccountID int64
 	ToAccountID   int64
@@ -303,11 +304,11 @@ type TransferTxParams struct {
 }
 
 type TransferTxResult struct {
-	Transfer         sqlc.Transfer
-	FromAccount      sqlc.Account
-	ToAccount        sqlc.Account
-	FromTransaction  sqlc.Transaction
-	ToTransaction    sqlc.Transaction
+	Transfer        sqlc.Transfer
+	FromAccount     sqlc.Account
+	ToAccount       sqlc.Account
+	FromTransaction sqlc.Transaction
+	ToTransaction   sqlc.Transaction
 }
 
 func (r *AccountRepo) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {

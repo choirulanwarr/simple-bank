@@ -67,7 +67,7 @@ func main() {
 	// Initialize cache
 	redisAddr := fmt.Sprintf("%s:%d", cfg.RedisHost, cfg.RedisPort)
 	cacheClient := cache.New(redisAddr)
-	defer cacheClient.Close()
+	defer func() { _ = cacheClient.Close() }()
 	if err := cacheClient.Ping(ctx); err != nil {
 		slog.Warn("redis not available, caching disabled", "error", err)
 	} else {

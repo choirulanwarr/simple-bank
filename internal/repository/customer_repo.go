@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/choirulanwar/simple-bank/internal/cache"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
+	"github.com/choirulanwar/simple-bank/internal/cache"
 	"github.com/choirulanwar/simple-bank/pkg/password"
 )
 

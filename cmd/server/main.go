@@ -98,8 +98,8 @@ func main() {
 
 	// Prometheus metrics
 	promRegistry := prometheus.NewRegistry()
-	promRegistry.Register(collectors.NewGoCollector())
-	promRegistry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	promRegistry.MustRegister(collectors.NewGoCollector())
+	promRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	grpcRequests := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "grpc_requests_total",
@@ -169,5 +169,5 @@ func main() {
 	sig := <-quit
 	slog.Info("shutting down server", "signal", sig.String())
 	grpcServer.GracefulStop()
-	metricsSrv.Close()
+	_ = metricsSrv.Close()
 }

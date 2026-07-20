@@ -3,6 +3,8 @@ name: Build
 on:
   push:
     branches: [master]
+  pull_request:
+    branches: [master]
 
 env:
   REGISTRY: ghcr.io
@@ -29,5 +31,5 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          push: true
+          push: ${{ github.event_name == 'push' }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

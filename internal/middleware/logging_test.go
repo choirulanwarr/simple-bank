@@ -21,20 +21,19 @@ func TestLoggingInterceptor(t *testing.T) {
 
 	mockLogger := slog.New(slog.NewJSONHandler(&testWriter{writeFunc: func(p []byte) (n int, err error) {
 		var logEntry map[string]any
-		json.Unmarshal(p, &logEntry)
+		_ = json.Unmarshal(p, &logEntry)
 
-		if msg, ok := logEntry["msg"].(string); ok {
-			if msg == "gRPC request started" {
-				if m, ok := logEntry["method"].(string); ok {
-					loggedMethod = m
-				}
-			} else if msg == "gRPC request completed" {
-				if d, ok := logEntry["duration"].(float64); ok {
-					loggedDuration = time.Duration(d)
-				}
-				if c, ok := logEntry["code"].(string); ok {
-					loggedCode = parseCode(c)
-				}
+		switch msg := logEntry["msg"].(string); msg {
+		case "gRPC request started":
+			if m, ok := logEntry["method"].(string); ok {
+				loggedMethod = m
+			}
+		case "gRPC request completed":
+			if d, ok := logEntry["duration"].(float64); ok {
+				loggedDuration = time.Duration(d)
+			}
+			if c, ok := logEntry["code"].(string); ok {
+				loggedCode = parseCode(c)
 			}
 		}
 		return len(p), nil
@@ -62,7 +61,7 @@ func TestLoggingInterceptor_WithError(t *testing.T) {
 
 	mockLogger := slog.New(slog.NewJSONHandler(&testWriter{writeFunc: func(p []byte) (n int, err error) {
 		var logEntry map[string]any
-		json.Unmarshal(p, &logEntry)
+		_ = json.Unmarshal(p, &logEntry)
 
 		if msg, ok := logEntry["msg"].(string); ok && msg == "gRPC request completed" {
 			if c, ok := logEntry["code"].(string); ok {

@@ -25,12 +25,12 @@ REDIS_PORT=6379
 `
 	err := os.WriteFile(".env.test", []byte(envContent), 0644)
 	require.NoError(t, err)
-	defer os.Remove(".env.test")
+	defer func() { _ = os.Remove(".env.test") }()
 
 	// Temporarily rename .env.test to .env for viper to find it
 	err = os.Rename(".env.test", ".env")
 	require.NoError(t, err)
-	defer os.Remove(".env")
+	defer func() { _ = os.Remove(".env") }()
 
 	cfg, err := Load()
 	require.NoError(t, err)
@@ -51,33 +51,33 @@ REDIS_PORT=6379
 
 func TestLoad_WithoutEnvFile(t *testing.T) {
 	// Ensure no .env file exists
-	os.Remove(".env")
+	_ = os.Remove(".env")
 
 	// Set environment variables
-	os.Setenv("POSTGRES_HOST", "env-host")
-	os.Setenv("POSTGRES_PORT", "5433")
-	os.Setenv("POSTGRES_USER", "envuser")
-	os.Setenv("POSTGRES_PASSWORD", "envpass")
-	os.Setenv("POSTGRES_DB", "envdb")
-	os.Setenv("GRPC_SERVER_ADDRESS", "0.0.0.0:8080")
-	os.Setenv("TOKEN_SYMMETRIC_KEY", "abcdefghijklmnopqrstuvwxyz123456")
-	os.Setenv("ACCESS_TOKEN_DURATION", "30m")
-	os.Setenv("REFRESH_TOKEN_DURATION", "48h")
-	os.Setenv("REDIS_HOST", "env-redis")
-	os.Setenv("REDIS_PORT", "6380")
+	_ = os.Setenv("POSTGRES_HOST", "env-host")
+	_ = os.Setenv("POSTGRES_PORT", "5433")
+	_ = os.Setenv("POSTGRES_USER", "envuser")
+	_ = os.Setenv("POSTGRES_PASSWORD", "envpass")
+	_ = os.Setenv("POSTGRES_DB", "envdb")
+	_ = os.Setenv("GRPC_SERVER_ADDRESS", "0.0.0.0:8080")
+	_ = os.Setenv("TOKEN_SYMMETRIC_KEY", "abcdefghijklmnopqrstuvwxyz123456")
+	_ = os.Setenv("ACCESS_TOKEN_DURATION", "30m")
+	_ = os.Setenv("REFRESH_TOKEN_DURATION", "48h")
+	_ = os.Setenv("REDIS_HOST", "env-redis")
+	_ = os.Setenv("REDIS_PORT", "6380")
 
 	defer func() {
-		os.Unsetenv("POSTGRES_HOST")
-		os.Unsetenv("POSTGRES_PORT")
-		os.Unsetenv("POSTGRES_USER")
-		os.Unsetenv("POSTGRES_PASSWORD")
-		os.Unsetenv("POSTGRES_DB")
-		os.Unsetenv("GRPC_SERVER_ADDRESS")
-		os.Unsetenv("TOKEN_SYMMETRIC_KEY")
-		os.Unsetenv("ACCESS_TOKEN_DURATION")
-		os.Unsetenv("REFRESH_TOKEN_DURATION")
-		os.Unsetenv("REDIS_HOST")
-		os.Unsetenv("REDIS_PORT")
+		_ = os.Unsetenv("POSTGRES_HOST")
+		_ = os.Unsetenv("POSTGRES_PORT")
+		_ = os.Unsetenv("POSTGRES_USER")
+		_ = os.Unsetenv("POSTGRES_PASSWORD")
+		_ = os.Unsetenv("POSTGRES_DB")
+		_ = os.Unsetenv("GRPC_SERVER_ADDRESS")
+		_ = os.Unsetenv("TOKEN_SYMMETRIC_KEY")
+		_ = os.Unsetenv("ACCESS_TOKEN_DURATION")
+		_ = os.Unsetenv("REFRESH_TOKEN_DURATION")
+		_ = os.Unsetenv("REDIS_HOST")
+		_ = os.Unsetenv("REDIS_PORT")
 	}()
 
 	cfg, err := Load()

@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"github.com/choirulanwar/simple-bank/api/pb"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/internal/repository"
-	"github.com/choirulanwar/simple-bank/api/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -90,7 +90,7 @@ func (h *CustomerHandler) ListCustomers(ctx context.Context, req *pb.ListCustome
 	}
 
 	return &pb.ListCustomersResponse{
-		Customers: protoCustomers,
+		Customers:  protoCustomers,
 		TotalCount: int64(len(protoCustomers)),
 		HasMore:    len(customers) == int(req.Limit),
 	}, nil
@@ -113,10 +113,10 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCust
 	}
 
 	customer, err := h.repo.UpdateCustomer(ctx, repository.UpdateCustomerParams{
-		ID:        req.Id,
-		Name:      req.Name,
-		Email:     req.Email,
-		IsActive:  req.IsActive,
+		ID:       req.Id,
+		Name:     req.Name,
+		Email:    req.Email,
+		IsActive: req.IsActive,
 	})
 	if err != nil {
 		if err.Error() == "email already registered" {

@@ -12,11 +12,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// decEq compares two decimal.Decimal for equality
-func decEq(a, b decimal.Decimal) bool {
-	return a.Equal(b)
-}
-
 // decStrEq compares a decimal.Decimal with an expected string
 func decStrEq(actual decimal.Decimal, expected string) bool {
 	exp, _ := decimal.NewFromString(expected)

@@ -50,7 +50,9 @@ func AuthInterceptor(tokenMaker token.Maker) grpc.UnaryServerInterceptor {
 	}
 }
 
-const userIDKey = "user_id"
+type contextKey string
+
+const userIDKey contextKey = "user_id"
 
 func GetUserIDFromContext(ctx context.Context) (int64, bool) {
 	userID, ok := ctx.Value(userIDKey).(int64)

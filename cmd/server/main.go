@@ -9,14 +9,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/choirulanwar/simple-bank/api"
+	"github.com/choirulanwar/simple-bank/api/pb"
+	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/internal/config"
 	"github.com/choirulanwar/simple-bank/internal/middleware"
 	"github.com/choirulanwar/simple-bank/internal/repository"
 	"github.com/choirulanwar/simple-bank/pkg/token"
-	"github.com/choirulanwar/simple-bank/db/sqlc"
-	"github.com/choirulanwar/simple-bank/api"
-	"github.com/choirulanwar/simple-bank/api/pb"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

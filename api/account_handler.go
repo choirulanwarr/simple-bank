@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 
+	"github.com/choirulanwar/simple-bank/api/pb"
 	"github.com/choirulanwar/simple-bank/db/sqlc"
 	"github.com/choirulanwar/simple-bank/internal/repository"
-	"github.com/choirulanwar/simple-bank/api/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"

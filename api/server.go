@@ -10,8 +10,8 @@ import (
 type SimpleBankServer struct {
 	pb.UnimplementedSimpleBankServer
 
-	customerHandler   *CustomerHandler
-	accountHandler    *AccountHandler
+	customerHandler    *CustomerHandler
+	accountHandler     *AccountHandler
 	transactionHandler *TransactionHandler
 }
 
@@ -21,8 +21,8 @@ func NewSimpleBankServer(
 	transactionHandler *TransactionHandler,
 ) *SimpleBankServer {
 	return &SimpleBankServer{
-		customerHandler:   customerHandler,
-		accountHandler:    accountHandler,
+		customerHandler:    customerHandler,
+		accountHandler:     accountHandler,
 		transactionHandler: transactionHandler,
 	}
 }

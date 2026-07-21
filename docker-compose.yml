@@ -1,3 +1,7 @@
+# ⚠️ Development only — PostgreSQL & Redis berjalan di container Docker.
+# Untuk production: PG & Redis diinstall NATIVE di VPS.
+#   => deploy/docker-compose.prod.yml
+
 services:
   postgres:
     image: postgres:16-alpine

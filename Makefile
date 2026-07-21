@@ -1,19 +1,59 @@
-.PHONY: postgres redis migrate sqlc test server build docker-up docker-down dev migrate-docker
+.PHONY: postgres redis migrate migrate-up migrate-down sqlc proto test server build docker-up docker-down dev deploy-migrate deploy-install-db
+
+# ── Database (native — PostgreSQL + Redis diinstall langsung di OS) ──
+# macOS: brew install postgresql@16 redis
+# Ubuntu: sudo bash deploy/install-db.sh
 
 postgres:
-	docker run --name postgres16 -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:16-alpine
+	@echo "Memulai PostgreSQL native..."
+	@if command -v brew &> /dev/null && brew services list 2>/dev/null | grep -q postgresql; then \
+		brew services start postgresql@16 2>/dev/null || true; \
+	elif pg_isready -q 2>/dev/null; then \
+		echo "PostgreSQL sudah running"; \
+	else \
+		echo "Jalankan PostgreSQL: brew services start postgresql@16 (macOS) atau sudo systemctl start postgresql (Linux)"; \
+		echo "Atau buka Postgres.app"; \
+	fi
 
 redis:
-	docker run --name redis7 -p 6379:6379 -d redis:7-alpine
+	@echo "Memulai Redis native..."
+	@if command -v brew &> /dev/null; then \
+		brew services start redis 2>/dev/null || true; \
+	elif redis-cli ping 2>/dev/null | grep -q PONG; then \
+		echo "Redis sudah running"; \
+	else \
+		echo "Jalankan Redis: brew services start redis (macOS) atau sudo systemctl start redis-server (Linux)"; \
+	fi
+
+# ── Migrations (Dev & Prod) ──
+# Prasyarat: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 migrate-up:
-	docker run --rm --network backend_default -v $(PWD)/db/migrations:/migrations migrate/migrate -path=/migrations -database "postgresql://root:secret@postgres:5432/simple_bank?sslmode=disable" up
+	migrate -path db/migrations -database "postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable" up
 
 migrate-down:
-	docker run --rm --network backend_default -v $(PWD)/db/migrations:/migrations migrate/migrate -path=/migrations -database "postgresql://root:secret@postgres:5432/simple_bank?sslmode=disable" down -all
+	migrate -path db/migrations -database "postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable" down -all
 
-migrate-docker:
-	@echo "Use 'make migrate-up' or 'make migrate-down' (requires docker network 'backend_default')"
+migrate:
+	migrate -path db/migrations -database "$(DATABASE_URL)" up
+
+migrate-down-all:
+	migrate -path db/migrations -database "$(DATABASE_URL)" down -all
+
+# ── Production Deploy Targets ──
+
+deploy-install-db:
+	sudo bash deploy/install-db.sh
+
+deploy-migrate:
+	DATABASE_URL="postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable" \
+	migrate -path db/migrations -database "$$DATABASE_URL" up
+
+deploy-rollback:
+	DATABASE_URL="postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable" \
+	migrate -path db/migrations -database "$$DATABASE_URL" down 1
+
+# ── Code Generation ──
 
 sqlc:
 	sqlc generate
@@ -21,8 +61,12 @@ sqlc:
 proto:
 	buf generate proto/
 
+# ── Testing ──
+
 test:
 	go test ./... -v -count=1 -cover
+
+# ── Build & Run ──
 
 server:
 	go run ./cmd/server
@@ -30,10 +74,15 @@ server:
 build:
 	go build -o bin/server ./cmd/server
 
+# ── Docker (alternative — untuk yang tetap ingin pakai container) ──
+
 docker-up:
 	docker compose up -d
 
 docker-down:
 	docker compose down -v
 
-dev: postgres redis sqlc migrate-up server
+# ── Development (all-in-one) ──
+# Pastikan PostgreSQL & Redis sudah running native sebelum menjalankan ini
+
+dev: sqlc migrate-up server

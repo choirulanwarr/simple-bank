@@ -41,17 +41,31 @@
 
 ---
 
-## Quick Start
+## Quick Start (Development)
 
 ### Prerequisites
 
 ```bash
 go version          # 1.22+
-docker --version    # 24+
-docker compose version
+psql --version     # PostgreSQL 16+
+redis-cli --version # Redis 7+
 ```
 
-### 1. Clone & Configure
+### 1. Install PostgreSQL & Redis Native
+
+**macOS (Homebrew):**
+```bash
+brew install postgresql@16 redis
+brew services start postgresql@16
+brew services start redis
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo bash deploy/install-db.sh
+```
+
+### 2. Clone & Configure
 
 ```bash
 git clone git@github.com:choirulanwarr/simple-bank.git
@@ -59,20 +73,31 @@ cd simple-bank/backend
 
 # Copy env template
 cp .env.example .env
-# Edit .env if needed (defaults work for local Docker)
+# Default .env sudah pakai localhost — cocok untuk native
 ```
 
-### 2. Start Full Stack (Database + Redis + App)
+### 3. Buat Database
 
 ```bash
-# One command: starts PostgreSQL, Redis, runs migrations, starts gRPC server
+# macOS (Postgres.app atau brew)
+createdb simple_bank
+# atau:
+psql -c "CREATE DATABASE simple_bank;"
+```
+
+### 4. Start Development
+
+```bash
+# One command: run migrations + start gRPC server
 make dev
 
 # Or step by step:
-docker compose up -d        # Start PostgreSQL + Redis
-make migrate-up             # Run database migrations
-make server                 # Start Go server (port 9090)
+make migrate-up         # Run database migrations
+go run ./cmd/server     # Start Go server (port 9090)
 ```
+
+### 5. Production Deployment
+> Lihat section [Deployment](#deployment) untuk VPS setup.
 
 ### 3. Verify
 
@@ -260,20 +285,111 @@ Target coverage: **≥ 80%** for `internal/` packages.
 
 ## Deployment
 
-### Docker (Production)
+### Hybrid Architecture (Production)
+
+PostgreSQL dan Redis diinstall **native** di VPS. Hanya aplikasi (API + FE) yang jalan di Docker container.
+
+```
+┌──────────────────────────────────────┐
+│              VPS                     │
+│  ┌──────────┐  ┌──────────┐         │
+│  │ PostgreSQL│  │  Redis   │         │  ← Native (systemctl)
+│  │ :5432    │  │ :6379    │         │
+│  └──────────┘  └──────────┘         │
+│  ┌──────────────────────────────┐   │
+│  │  Docker Container            │   │
+│  │  simple-bank-api  (:9090)    │   │  ← Docker (GHCR image)
+│  │  simple-bank-fe   (:80/443)  │   │
+│  └──────────────────────────────┘   │
+└──────────────────────────────────────┘
+```
+
+**Alasan:**
+- PostgreSQL + Redis berat — native lebih ringan RAM (~100MB sisa) untuk VPS 1GB
+- API + FE ringan — Docker untuk CI/CD otomatis via GitHub Actions + GHCR
+
+---
+
+### Step 1: Install PostgreSQL 16 + Redis 7 Native
 
 ```bash
-# Build
-docker build -t simple-bank:latest .
+# Otomatis (Ubuntu/Debian)
+sudo bash deploy/install-db.sh
 
-# Run (with external PostgreSQL/Redis)
-docker run -d \
-  -p 9090:9090 \
-  -e POSTGRES_HOST=your-db-host \
-  -e POSTGRES_PASSWORD=your-password \
-  -e TOKEN_SYMMETRIC_KEY=your-32-byte-key \
-  simple-bank:latest
+# Atau manual:
+# PostgreSQL
+sudo apt install postgresql-16 postgresql-client-16
+sudo systemctl enable --now postgresql
+sudo -u postgres createuser root -P
+sudo -u postgres createdb simple_bank --owner root
+
+# Redis
+sudo apt install redis
+sudo systemctl enable --now redis-server
 ```
+
+### Step 2: Tuning PostgreSQL (wajib untuk VPS 1GB RAM)
+
+```conf
+# /etc/postgresql/16/main/postgresql.conf
+shared_buffers = 256MB
+work_mem = 4MB
+maintenance_work_mem = 64MB
+effective_cache_size = 512MB
+max_connections = 20
+```
+
+Setelah tuning, restart:
+```bash
+sudo systemctl restart postgresql
+```
+
+### Step 3: Run Migrations
+
+```bash
+make deploy-migrate POSTGRES_USER=root POSTGRES_PASSWORD=secret
+# atau langsung:
+migrate -path db/migrations -database "postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable" up
+```
+
+### Step 4: Deploy API Container
+
+```bash
+# Pull image dari GHCR
+docker pull ghcr.io/choirulanwarr/simple-bank:latest
+
+# Jalankan (PG/Redis native di localhost)
+docker run -d \
+  --name simple-bank-api \
+  -p 9090:9090 \
+  -e POSTGRES_HOST=127.0.0.1 \
+  -e POSTGRES_PORT=5432 \
+  -e POSTGRES_USER=root \
+  -e POSTGRES_PASSWORD=secret \
+  -e POSTGRES_DB=simple_bank \
+  -e REDIS_HOST=127.0.0.1 \
+  -e REDIS_PORT=6379 \
+  -e TOKEN_SYMMETRIC_KEY=your-32-byte-key \
+  --restart unless-stopped \
+  ghcr.io/choirulanwarr/simple-bank:latest
+
+# Atau pakai docker compose (recommended)
+docker compose -f deploy/docker-compose.prod.yml up -d
+```
+
+### Step 5: Auto-deploy via GitHub Actions
+
+Push ke `master` → otomatis:
+1. GitHub Actions build Docker image
+2. Push ke GHCR (`ghcr.io/choirulanwarr/simple-bank:latest`)
+3. SSH ke VPS → `docker pull` → `docker compose up -d`
+
+---
+
+### Local Development
+
+PostgreSQL & Redis berjalan **native** di OS (Homebrew / `systemctl`).
+Lihat [Quick Start](#quick-start-development) untuk setup.
 
 ### Kubernetes (Planned)
 

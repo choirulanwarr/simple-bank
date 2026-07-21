@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/choirulanwar/simple-bank/db/sqlc"
+	"github.com/choirulanwar/simple-bank/internal/cache"
 	"github.com/choirulanwar/simple-bank/pkg/password"
 )
 
@@ -13,10 +15,15 @@ var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-
 
 type CustomerRepo struct {
 	store sqlc.Querier
+	cache *cache.Cache
 }
 
 func NewCustomerRepo(store sqlc.Querier) *CustomerRepo {
 	return &CustomerRepo{store: store}
+}
+
+func (r *CustomerRepo) SetCache(c *cache.Cache) {
+	r.cache = c
 }
 
 type CreateCustomerParams struct {
@@ -57,10 +64,24 @@ func (r *CustomerRepo) CreateCustomer(ctx context.Context, arg CreateCustomerPar
 }
 
 func (r *CustomerRepo) GetCustomer(ctx context.Context, id int64) (sqlc.Customer, error) {
+	// Try cache first
+	if r.cache != nil {
+		var customer sqlc.Customer
+		if err := r.cache.Get(ctx, cache.CustomerKey(id), &customer); err == nil {
+			return customer, nil
+		}
+	}
+
 	customer, err := r.store.GetCustomer(ctx, id)
 	if err != nil {
 		return sqlc.Customer{}, fmt.Errorf("get customer: %w", err)
 	}
+
+	// Populate cache (longer TTL — customer info changes infrequently)
+	if r.cache != nil {
+		_ = r.cache.Set(ctx, cache.CustomerKey(id), &customer, 5*time.Minute)
+	}
+
 	return customer, nil
 }
 
@@ -93,6 +114,12 @@ func (r *CustomerRepo) UpdateCustomer(ctx context.Context, arg UpdateCustomerPar
 	if err != nil {
 		return sqlc.Customer{}, fmt.Errorf("update customer: %w", err)
 	}
+
+	// Invalidate cache after update
+	if r.cache != nil {
+		_ = r.cache.Del(ctx, cache.CustomerKey(arg.ID))
+	}
+
 	return customer, nil
 }
 

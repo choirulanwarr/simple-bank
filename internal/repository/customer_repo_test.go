@@ -17,7 +17,7 @@ type CustomerRepoTestSuite struct {
 }
 
 func (s *CustomerRepoTestSuite) SetupSuite() {
-	dbURL := "postgresql://postgres:root@localhost:5432/simple_bank?sslmode=disable"
+	dbURL := "postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable"
 	pool, err := pgxpool.New(context.Background(), dbURL)
 	s.Require().NoError(err)
 	s.pool = pool

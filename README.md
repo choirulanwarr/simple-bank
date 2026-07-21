@@ -47,12 +47,25 @@
 
 ```bash
 go version          # 1.22+
-docker --version    # 24+
-docker compose version
-# Untuk production: PostgreSQL 16 + Redis 7 native (lihat section Deployment)
+psql --version     # PostgreSQL 16+
+redis-cli --version # Redis 7+
 ```
 
-### 1. Clone & Configure
+### 1. Install PostgreSQL & Redis Native
+
+**macOS (Homebrew):**
+```bash
+brew install postgresql@16 redis
+brew services start postgresql@16
+brew services start redis
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo bash deploy/install-db.sh
+```
+
+### 2. Clone & Configure
 
 ```bash
 git clone git@github.com:choirulanwarr/simple-bank.git
@@ -60,22 +73,31 @@ cd simple-bank/backend
 
 # Copy env template
 cp .env.example .env
-# Edit .env if needed (defaults work for local Docker)
+# Default .env sudah pakai localhost — cocok untuk native
 ```
 
-### 2. Start (Development Mode — Docker PG + Redis)
+### 3. Buat Database
 
 ```bash
-# One command: starts PostgreSQL, Redis, runs migrations, starts gRPC server
+# macOS (Postgres.app atau brew)
+createdb simple_bank
+# atau:
+psql -c "CREATE DATABASE simple_bank;"
+```
+
+### 4. Start Development
+
+```bash
+# One command: run migrations + start gRPC server
 make dev
 
 # Or step by step:
-docker compose up -d        # Start PostgreSQL + Redis
-go run ./cmd/server         # Start Go server (port 9090)
+make migrate-up         # Run database migrations
+go run ./cmd/server     # Start Go server (port 9090)
 ```
 
-### 3. Production Deployment
-> Lihat section [Deployment](#deployment) untuk native PG/Redis + Docker API/FE.
+### 5. Production Deployment
+> Lihat section [Deployment](#deployment) untuk VPS setup.
 
 ### 3. Verify
 
@@ -364,15 +386,10 @@ Push ke `master` → otomatis:
 
 ---
 
-### Single VPS Docker (Dev/Testing)
+### Local Development
 
-Untuk development lokal, Docker Compose includes PG + Redis:
-
-```bash
-make dev  # start docker PG + Redis + run migrations + start server
-```
-
----
+PostgreSQL & Redis berjalan **native** di OS (Homebrew / `systemctl`).
+Lihat [Quick Start](#quick-start-development) untuk setup.
 
 ### Kubernetes (Planned)
 

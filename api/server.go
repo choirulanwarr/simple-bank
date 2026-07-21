@@ -13,17 +13,20 @@ type SimpleBankServer struct {
 	customerHandler    *CustomerHandler
 	accountHandler     *AccountHandler
 	transactionHandler *TransactionHandler
+	adminHandler       *AdminHandler
 }
 
 func NewSimpleBankServer(
 	customerHandler *CustomerHandler,
 	accountHandler *AccountHandler,
 	transactionHandler *TransactionHandler,
+	adminHandler *AdminHandler,
 ) *SimpleBankServer {
 	return &SimpleBankServer{
 		customerHandler:    customerHandler,
 		accountHandler:     accountHandler,
 		transactionHandler: transactionHandler,
+		adminHandler:       adminHandler,
 	}
 }
 
@@ -87,7 +90,7 @@ func (s *SimpleBankServer) GetAuditLogs(ctx context.Context, req *pb.GetAuditLog
 	return s.transactionHandler.GetAuditLogs(ctx, req)
 }
 
-// Auth methods (to be implemented in future tasks)
+// Auth methods
 func (s *SimpleBankServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	return nil, nil // TODO: implement in T-017
+	return s.adminHandler.Login(ctx, req)
 }

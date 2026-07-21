@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	AddAccountBalance(ctx context.Context, arg AddAccountBalanceParams) (Account, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
+	CreateAdmin(ctx context.Context, arg CreateAdminParams) (Admin, error)
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
@@ -18,10 +19,13 @@ type Querier interface {
 	DeleteCustomer(ctx context.Context, id int64) error
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id int64) (Account, error)
+	GetAdmin(ctx context.Context, id int64) (Admin, error)
+	GetAdminByEmail(ctx context.Context, email string) (Admin, error)
 	GetCustomer(ctx context.Context, id int64) (Customer, error)
 	GetCustomerByEmail(ctx context.Context, email string) (Customer, error)
 	GetTransfer(ctx context.Context, id int64) (Transfer, error)
 	ListAccountsByCustomer(ctx context.Context, customerID int64) ([]Account, error)
+	ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin, error)
 	ListAuditLogsByRecord(ctx context.Context, arg ListAuditLogsByRecordParams) ([]AuditLog, error)
 	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]Customer, error)
 	ListTransactionsByAccount(ctx context.Context, arg ListTransactionsByAccountParams) ([]Transaction, error)

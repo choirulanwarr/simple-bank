@@ -78,6 +78,7 @@ func main() {
 	store := sqlc.New(pool)
 	repo := repository.NewAccountRepo(store, pool)
 	custRepo := repository.NewCustomerRepo(store)
+	adminRepo := repository.NewAdminRepo(store)
 	repo.SetCache(cacheClient)
 	custRepo.SetCache(cacheClient)
 
@@ -91,7 +92,8 @@ func main() {
 	// Create handlers
 	customerHandler := api.NewCustomerHandler(custRepo)
 	accountHandler := api.NewAccountHandler(repo)
-	transactionHandler := api.NewTransactionHandler(repo, custRepo, tokenMaker)
+	adminHandler := api.NewAdminHandler(adminRepo, tokenMaker)
+	transactionHandler := api.NewTransactionHandler(repo, tokenMaker)
 
 	// gRPC Server with interceptors
 	grpcServer := grpc.NewServer(
@@ -106,6 +108,7 @@ func main() {
 		customerHandler,
 		accountHandler,
 		transactionHandler,
+		adminHandler,
 	))
 
 	reflection.Register(grpcServer)
@@ -144,6 +147,7 @@ func main() {
 		customerHandler,
 		accountHandler,
 		transactionHandler,
+		adminHandler,
 	))
 	reflection.Register(grpcServer)
 
@@ -169,9 +173,9 @@ func main() {
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Grpc-Web, X-User-Agent")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			if r.Method == http.MethodOptions {
+				w.Header().Set("Access-Control-Allow-Headers", r.Header.Get("Access-Control-Request-Headers"))
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}

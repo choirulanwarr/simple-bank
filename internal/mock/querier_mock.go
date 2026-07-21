@@ -71,6 +71,21 @@ func (mr *MockQuerierMockRecorder) CreateAccount(ctx, arg any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockQuerier)(nil).CreateAccount), ctx, arg)
 }
 
+// CreateAdmin mocks base method.
+func (m *MockQuerier) CreateAdmin(ctx context.Context, arg sqlc.CreateAdminParams) (sqlc.Admin, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAdmin", ctx, arg)
+	ret0, _ := ret[0].(sqlc.Admin)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAdmin indicates an expected call of CreateAdmin.
+func (mr *MockQuerierMockRecorder) CreateAdmin(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAdmin", reflect.TypeOf((*MockQuerier)(nil).CreateAdmin), ctx, arg)
+}
+
 // CreateAuditLog mocks base method.
 func (m *MockQuerier) CreateAuditLog(ctx context.Context, arg sqlc.CreateAuditLogParams) (sqlc.AuditLog, error) {
 	m.ctrl.T.Helper()
@@ -175,6 +190,36 @@ func (mr *MockQuerierMockRecorder) GetAccountForUpdate(ctx, id any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountForUpdate", reflect.TypeOf((*MockQuerier)(nil).GetAccountForUpdate), ctx, id)
 }
 
+// GetAdmin mocks base method.
+func (m *MockQuerier) GetAdmin(ctx context.Context, id int64) (sqlc.Admin, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdmin", ctx, id)
+	ret0, _ := ret[0].(sqlc.Admin)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAdmin indicates an expected call of GetAdmin.
+func (mr *MockQuerierMockRecorder) GetAdmin(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdmin", reflect.TypeOf((*MockQuerier)(nil).GetAdmin), ctx, id)
+}
+
+// GetAdminByEmail mocks base method.
+func (m *MockQuerier) GetAdminByEmail(ctx context.Context, email string) (sqlc.Admin, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdminByEmail", ctx, email)
+	ret0, _ := ret[0].(sqlc.Admin)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAdminByEmail indicates an expected call of GetAdminByEmail.
+func (mr *MockQuerierMockRecorder) GetAdminByEmail(ctx, email any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdminByEmail", reflect.TypeOf((*MockQuerier)(nil).GetAdminByEmail), ctx, email)
+}
+
 // GetCustomer mocks base method.
 func (m *MockQuerier) GetCustomer(ctx context.Context, id int64) (sqlc.Customer, error) {
 	m.ctrl.T.Helper()
@@ -233,6 +278,21 @@ func (m *MockQuerier) ListAccountsByCustomer(ctx context.Context, customerID int
 func (mr *MockQuerierMockRecorder) ListAccountsByCustomer(ctx, customerID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountsByCustomer", reflect.TypeOf((*MockQuerier)(nil).ListAccountsByCustomer), ctx, customerID)
+}
+
+// ListAdmins mocks base method.
+func (m *MockQuerier) ListAdmins(ctx context.Context, arg sqlc.ListAdminsParams) ([]sqlc.Admin, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAdmins", ctx, arg)
+	ret0, _ := ret[0].([]sqlc.Admin)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAdmins indicates an expected call of ListAdmins.
+func (mr *MockQuerierMockRecorder) ListAdmins(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAdmins", reflect.TypeOf((*MockQuerier)(nil).ListAdmins), ctx, arg)
 }
 
 // ListAuditLogsByRecord mocks base method.

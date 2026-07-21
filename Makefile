@@ -29,10 +29,10 @@ redis:
 # Prasyarat: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 migrate-up:
-	migrate -path db/migrations -database "postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable" up
+	migrate -path db/migrations -database "postgresql://postgres:root@localhost:5432/simple_bank?sslmode=disable" up
 
 migrate-down:
-	migrate -path db/migrations -database "postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable" down -all
+	migrate -path db/migrations -database "postgresql://postgres:root@localhost:5432/simple_bank?sslmode=disable" down -all
 
 migrate:
 	migrate -path db/migrations -database "$(DATABASE_URL)" up

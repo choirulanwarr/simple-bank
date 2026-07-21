@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +17,7 @@ import (
 	"github.com/choirulanwar/simple-bank/internal/middleware"
 	"github.com/choirulanwar/simple-bank/internal/repository"
 	"github.com/choirulanwar/simple-bank/pkg/token"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -155,19 +155,37 @@ func main() {
 		Handler: metricsMux,
 	}
 
-	lis, err := net.Listen("tcp", cfg.GRPCServerAddress)
-	if err != nil {
-		slog.Error("failed to listen gRPC", "address", cfg.GRPCServerAddress, "error", err)
-		os.Exit(1)
+	// Start gRPC-web server (handles both gRPC and gRPC-web on same port)
+	grpcWebServer := grpcweb.WrapServer(grpcServer,
+		grpcweb.WithOriginFunc(func(origin string) bool { return true }),
+		grpcweb.WithWebsockets(true),
+		grpcweb.WithWebsocketOriginFunc(func(req *http.Request) bool { return true }),
+		grpcweb.WithCorsForRegisteredEndpointsOnly(false),
+	)
+
+	// Wrap with CORS handler for browser preflight requests
+	srv := &http.Server{
+		Addr: cfg.GRPCServerAddress,
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Grpc-Web, X-User-Agent")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			grpcWebServer.ServeHTTP(w, r)
+		}),
 	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		slog.Info("gRPC server starting", "address", cfg.GRPCServerAddress)
-		if err := grpcServer.Serve(lis); err != nil {
-			slog.Error("gRPC server failed", "error", err)
+		slog.Info("gRPC-web server starting", "address", cfg.GRPCServerAddress)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("gRPC-web server failed", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -182,6 +200,6 @@ func main() {
 
 	sig := <-quit
 	slog.Info("shutting down server", "signal", sig.String())
-	grpcServer.GracefulStop()
+	_ = srv.Close()
 	_ = metricsSrv.Close()
 }

@@ -195,7 +195,6 @@ func (h *TransactionHandler) GetAuditLogs(ctx context.Context, req *pb.GetAuditL
 	}, nil
 }
 
-
 func (h *TransactionHandler) accountToProto(a sqlc.Account) *pb.Account {
 	return &pb.Account{
 		Id:            a.ID,
